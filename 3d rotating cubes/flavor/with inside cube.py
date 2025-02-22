@@ -23,7 +23,7 @@ def bresenham(x0, y0, x1, y1):
     return points
 
 columns, rows = 80, 24
-scale = 14  # Increased scale for better fill
+scale = 12
 
 vertices = [
     (-1, -1, -1), (1, -1, -1), (1, 1, -1), (-1, 1, -1),
@@ -60,35 +60,34 @@ def project(point):
     return (int(x * scale + columns/2), int(y * scale + rows/2))
 
 def get_char(z):
-    z_clamped = max(-3, min(z, 3))
-    normalized_z = (z_clamped + 3) / 6  # 0 to 1 range
-    return "!@#$:;=*.~,"[min(10, int(normalized_z * 11))]
+    z_clamped = max(-2, min(z, 2))
+    normalized_z = (z_clamped + 2) / 4  # Normalize to 0-1 range
+    return "!@#$*."[min(5, int(normalized_z * 6))]
 
 def raster_quad(v1, v2, v3, v4, buffer, z_buffer):
-    points = [v1, v2, v3, v4]
-    x_coords = [p[0] for p in points]
-    y_coords = [p[1] for p in points]
-    min_x = max(0, int(min(x_coords)))
-    max_x = min(columns-1, int(max(x_coords)))
-    min_y = max(0, int(min(y_coords)))
-    max_y = min(rows-1, int(max(y_coords)))
-    
-    for y in range(min_y, max_y + 1):
-        for x in range(min_x, max_x + 1):
-            inside = True
-            for i in range(4):
-                x0, y0, _ = points[i]
-                x1, y1, _ = points[(i+1)%4]
-                edge = (x1 - x0) * (y - y0) - (y1 - y0) * (x - x0)
-                if edge < 0:
-                    inside = False
-                    break
-            if inside:
-                # Calculate depth as average of all four points
-                z = sum(p[2] for p in points) / 4
-                if z > z_buffer[y][x]:
-                    z_buffer[y][x] = z
-                    buffer[y][x] = get_char(z)
+    for triangle in [(v1, v2, v3), (v1, v3, v4)]:
+        x0, y0, z0 = triangle[0]
+        x1, y1, z1 = triangle[1]
+        x2, y2, z2 = triangle[2]
+        
+        min_x = max(0, min(x0, x1, x2))
+        max_x = min(columns-1, max(x0, x1, x2))
+        min_y = max(0, min(y0, y1, y2))
+        max_y = min(rows-1, max(y0, y1, y2))
+        
+        for y in range(int(min_y), int(max_y)+1):
+            for x in range(int(min_x), int(max_x)+1):
+                edge1 = (x1 - x0)*(y - y0) - (y1 - y0)*(x - x0)
+                edge2 = (x2 - x1)*(y - y1) - (y2 - y1)*(x - x1)
+                edge3 = (x0 - x2)*(y - y2) - (y0 - y2)*(x - x2)
+                
+                if edge1 >= 0 and edge2 >= 0 and edge3 >= 0:
+                    z = z0 + (z1 - z0)*((x - x0)/(x1 - x0 if x1 != x0 else 1)) + \
+                            (z2 - z0)*((y - y0)/(y2 - y0 if y2 != y0 else 1))
+                    if 0 <= x < columns and 0 <= y < rows:
+                        if z > z_buffer[y][x]:
+                            z_buffer[y][x] = z
+                            buffer[y][x] = get_char(z)
 
 angle_x = angle_y = angle_z = 0
 
@@ -99,12 +98,12 @@ try:
         rotated = [rotate_z(rotate_y(rotate_x(v, angle_x), angle_y), angle_z) for v in vertices]
         screen_points = [(project(v)[0], project(v)[1], v[2]) for v in rotated]
 
-        # Fill faces with solid characters
+        # Fill cube faces
         for face in faces:
             v1, v2, v3, v4 = [screen_points[i] for i in face]
             raster_quad(v1, v2, v3, v4, buffer, z_buffer)
 
-        # Draw edges with same characters
+        # Draw cube edges
         for edge in edges:
             i0, i1 = edge
             x0, y0, z0 = screen_points[i0]
@@ -122,10 +121,10 @@ try:
         os.system('cls' if os.name == 'nt' else 'clear')
         print('\n'.join(''.join(row) for row in buffer))
         
-        angle_x += 0.08
-        angle_y += 0.12
-        angle_z += 0.04
-        time.sleep(0.08)
+        angle_x += 0.1
+        angle_y += 0.1
+        angle_z += 0.05
+        time.sleep(0.1)
 
 except KeyboardInterrupt:
     pass
