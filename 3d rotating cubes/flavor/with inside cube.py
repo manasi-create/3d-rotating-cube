@@ -84,7 +84,8 @@ def raster_quad(v1, v2, v3, v4, buffer, z_buffer):
                     inside = False
                     break
             if inside:
-                z = sum(p[2] for p in points)/4  # Average depth
+                # Calculate depth as average of all four points
+                z = sum(p[2] for p in points) / 4
                 if z > z_buffer[y][x]:
                     z_buffer[y][x] = z
                     buffer[y][x] = get_char(z)
