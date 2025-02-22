@@ -61,8 +61,8 @@ def project(point):
 
 def get_char(z):
     z_clamped = max(-2, min(z, 2))
-    normalized_z = (z_clamped + 2) / 4
-    return "@#$*"[min(3, int(normalized_z * 4))]
+    normalized_z = (z_clamped + 2) / 4  # Normalize to 0-1 range
+    return "!@#$*."[min(5, int(normalized_z * 6))]
 
 def raster_quad(v1, v2, v3, v4, buffer, z_buffer):
     for triangle in [(v1, v2, v3), (v1, v3, v4)]:
